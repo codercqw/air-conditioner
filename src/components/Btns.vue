@@ -35,10 +35,21 @@
       </van-button>
     </div>
   </div>
+  <div class="audios">
+    <audio id="di" preload="auto">
+      <source src="../assets/audio/di.mp3" />
+    </audio>
+    <audio id="ac-work" preload="auto">
+      <source src="../assets/audio/ac-work.mp3" />
+    </audio>
+    <audio id="air-extractor-fan" preload="auto">
+      <source src="../assets/audio/air-extractor-fan.mp3" />
+    </audio>
+  </div>
 </template>
 
 <script>
-import { reactive, toRefs, computed } from 'vue'
+import { reactive, toRefs, computed, ref, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { Notify } from 'vant'
 export default {
@@ -46,15 +57,39 @@ export default {
   setup() {
     let store = useStore()
     let info = computed(() => store.state.info)
+    // 噪音起始时间
+    const noiseStartTime = 2
+    // 噪音持续时间
+    const noiseDuration = 56
+    let timeoutId = null
+    let intervalId = null
     const changePower = () => {
+      playDi()
+      if (info.value.power) {
+        document.getElementById('ac-work').load()
+        const acWork = document.getElementById('air-extractor-fan')
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        if (intervalId) {
+          clearInterval(intervalId)
+        }
+        acWork.currentTime = noiseStartTime + noiseDuration
+      } else {
+        playStartSound()
+      }
       store.commit('set_power', !info.value.power)
     }
+
     const changeMode = (mode) => {
       if (!info.value.power) return
+      playDi()
       store.commit('set_mode', mode)
     }
+
     const changeteMperature = (temperature) => {
       if (!info.value.power) return
+      playDi()
       if (temperature == 1) {
         if (info.value.temperature == 31) {
           Notify({ type: 'warning', message: '已经是最大温度啦！' })
@@ -68,6 +103,37 @@ export default {
         }
       }
       store.commit('set_temperature', temperature)
+    }
+
+    const playDi = () => {
+      const di = document.getElementById('di')
+      di.play()
+    }
+    /**
+     * 启动音
+     */
+    const playStartSound = () => {
+      const acStart = document.getElementById('ac-work')
+      acStart.load()
+      acStart.play()
+      setTimeout(() => {
+        playWorkSound()
+      }, 8000)
+    }
+
+    /**
+     * 播放空调工作声音
+     */
+    function playWorkSound() {
+      const acWork = document.getElementById('air-extractor-fan')
+      acWork.load()
+      acWork.play()
+
+      timeoutId = setTimeout(() => {
+        intervalId = setInterval(() => {
+          acWork.currentTime = noiseStartTime
+        }, noiseDuration * 1000)
+      }, noiseStartTime * 1000)
     }
     return {
       info,
